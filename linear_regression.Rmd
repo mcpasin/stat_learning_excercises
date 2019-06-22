@@ -19,7 +19,7 @@ library("tidyverse")
 
 Let's use the `Boston` dataset.
 
-***
+<br>
 
 ### Quickly explore data
 ```{r}
