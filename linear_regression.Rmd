@@ -1,0 +1,180 @@
+---
+title: "Linear Regression example"
+author: "Marco Pasin"
+date: "22 giugno 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+***
+
+```{r}
+library("MASS")
+library("ISLR")
+library("tidyverse")
+```
+
+Let's use the `Boston` dataset.
+
+***
+
+### Quickly explore data
+```{r}
+glimpse(Boston)
+?Boston
+```
+
+
+```{r}
+Boston %>% 
+  ggplot(aes(lstat, medv)) +
+  geom_point()
+```
+
+***
+
+### Linear Regression
+
+Let's fit a simple model using lstat as single predictor.
+```{r}
+fit1 <- Boston %>% 
+  lm(medv ~ lstat, .)
+
+fit1
+summary(fit1)
+```
+
+Both look very significant.Coefficient for lstat is negative and very significant. Coeeficient for intercept also very significant though it's not very interesting for us.
+
+
+We can add the linear model fit to the plot.
+```{r}
+Boston %>% 
+  ggplot(aes(lstat, medv)) +
+  geom_point() +
+  geom_abline(intercept = fit1$coefficients[1], slope= fit1$coefficients[2], 
+              col = "red", size = 1)
+```
+
+Find CI for coefficients (95% CI for both)
+```{r}
+confint(fit1)
+```
+
+Lets make some predictions using 3 new values for lstat. Ask aso for CI along with predictions. 
+```{r}
+fit1 %>% 
+  predict(data.frame(lstat=c(5, 10, 15)), interval = "confidence")
+```
+
+We get the fit fot th 3 values, and then the lower and upper confidence bands.
+
+So, that's simple linear regression :)
+
+Let's move now to **multiple linear regression**.
+
+***
+
+### Multiple linear regression
+
+Fit a model with lstat and age
+```{r}
+fit2 <- Boston %>% 
+  lm(medv ~ lstat + age, .)
+
+summary(fit2)
+```
+
+Age is also significant, quite strongly, but not as significant as lstat. R2 also improved a bit.
+
+Now we fit a model considering all variables in the dataset as predictors.
+
+```{r}
+fit3 <- Boston %>% 
+  lm(medv ~ ., .)
+
+summary(fit3)
+```
+
+We see a lot of coefficients now. Some are significant , some not.
+
+Age (which earlier was significant) is not longer significant. There are a lot of other predictors which are correlated with age, and in this context age is not longer required.
+
+
+Following plots give various views of the model. The obj. is to look for non-linearity.
+```{r}
+plot(fit3)
+```
+
+There seem to be some ***non-linearity***.
+
+We can update the model and remove not significant predictors.
+```{r}
+fit4 <- Boston %>% 
+  lm(medv ~ .-age-indus, .)
+
+summary(fit4)
+```
+
+R2 increases to explain 74% of total variance in the data.
+
+***
+
+### Non linear terms and interactions
+
+Here the first thing we do is make a fit where we put an interaction between lstat and age.
+Star in the formula means that we are gonna have main effect for each and the interaction.
+```{r}
+fit5 <- Boston %>% 
+  lm(medv ~ lstat * age, .)
+
+summary(fit5)
+```
+
+While the main effect for age is not significant here, the interaction is somewhat significant.
+
+Since in a previous scatter plot we saw there was a non-linear pattern between lstat and response variable, next thing we do is take this into account and put lstat in a quadratic term.
+
+```{r}
+fit6 <- Boston %>% 
+  lm(medv ~ lstat + I(lstat^2), .)
+
+summary(fit6)
+```
+
+Not surprisingly, both coefficient, the linear and quadratic, are strongly significant.
+
+
+Add a qudratic fit in the scatter plot.
+```{r}
+Boston %>% 
+  ggplot(aes(lstat, medv)) +
+  geom_point() +
+  geom_smooth(aes(y = medv),method = "lm", formula = y ~ x + I(x^2), 
+              col="red", size = 1)
+```
+
+Last, we are gonna fit response variable as a **polynomial** of degree four in lstat.
+
+```{r}
+fit7 <- Boston %>% 
+  lm(medv ~ poly(lstat, 4), .)
+
+summary(fit7)
+```
+
+Add the polynomial fit in the scatter plot and compare them.
+```{r}
+Boston %>% 
+  ggplot(aes(lstat, medv)) +
+  geom_point() +
+  geom_smooth(aes(y = medv),method = "lm", formula = y ~ x + I(x^2), 
+              col="red", size = 1, se=FALSE) +
+  geom_smooth(aes(y = medv),method = "lm", formula = y ~ poly(x, 4), 
+              col="blue", size = 1, se = FALSE)
+```
+
+It seems that the polinomial starts to **overfit** the data a bit too much, especially in the right tail it seems to folllow the data too strictly.
