@@ -1,0 +1,95 @@
+---
+title: "Logistic Regression example"
+author: "Marco Pasin"
+date: "14 luglio 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+***
+Load ISLR package with all datasets.
+```{r}
+library("ISLR")
+library("tidyverse")
+```
+
+Let's use the `Smarket` dataset.
+
+<br>
+
+### Quickly explore data
+```{r}
+glimpse(Smarket)
+summary(Smarket)
+?Smarket
+```
+
+We are going to use `direction` as response variable, and that is whether the market went up or down since the previous day. See if we can predict it as a binary response using **logistic regression**.
+
+Lets do a scatter plot matrix and cross all variable with each others to spot any correlation. USe as color indicator our binary response variable.
+```{r}
+Smarket %>% 
+   pairs(col = Smarket$Direction)
+```
+
+It looks a bit crowded!Doesn't seem to be too much correlation going on here. Of course `Direction` is derived from the variable `Today`, and so up or down seems to make a division.
+
+***
+
+### Logistic Regression
+
+Let's fit a simple model using the `glm` function. Use all lags variables and also volume as predictors. And use **family equals binomial**
+which tells `glm` to fit a logistic regression model instead of one of the many other models that can be fit to the GLM.
+```{r}
+glm_fit <- Smarket %>% 
+  glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume, .,
+      family = binomial)
+
+summary(glm_fit)
+```
+
+The summary tells something about the fit:  
+
+* seems like none of the coefficient is significant here
+* we also didn't see strong correlations above
+
+
+We can make prediction on the training data we used to train the model, which will return a vector of fitted probabilities.
+```{r}
+glm_probs <- glm_fit %>% 
+  predict(Smarket, type = "response")
+
+glm_probs[1:5]
+```
+
+Looking at the first five, we see that they are very close to 50%, which, again, is not surprising .We don't expect to get strong predictions in this case. So this is a prediction whether the market is up or down based on the lags and other predictions.
+
+We can turn these probabilities into classifications by thresholding at 0.5. We do it by using the if/else command and create a vector of true and falses.
+```{r}
+glm_pred <- ifelse(glm_probs > 0.5, "Up", "down")
+```
+
+Finally we can make a table of `glm_pred`, which is our ups and downs from our prediction, against the true direction.
+
+```{r}
+attach(Smarket)
+table(glm_pred, Direction)
+```
+
+* On the diagonal is where we do correct classification, while  
+* on the off diagonals is where we make mistakes.
+
+We see from our table that there is lot of elements on the off diaginals. We can actually get our mean classification performance.
+
+```{r}
+mean(glm_pred==Direction)
+```
+We see that we do worse than chance.
+
+Lets now divide our data into training and test...
+
+***
+Check out `tidymodels` and `recipes` package to train/test ...
